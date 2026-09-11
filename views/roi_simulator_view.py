@@ -31,6 +31,9 @@ def init_simulator_state(all_data):
         "roi_base_procurement": 12000.0,
         "roi_scen_procurement": 12000.0,
         
+        "roi_base_revenue_mt": 40.0,
+        "roi_scen_revenue_mt": 40.0,
+        
         "roi_market_risk": 5.0,
         "roi_fuel_risk": 5.0,
         "roi_delay_prob": 20.0,
@@ -44,15 +47,20 @@ def apply_preset(preset_name):
     """Apply predefined scenario adjustments."""
     base_freight = st.session_state.roi_base_freight
     base_fuel = st.session_state.roi_base_fuel
+    base_rev = st.session_state.roi_base_revenue_mt
+    
+    st.session_state.roi_scen_revenue_mt = base_rev # Default to keeping revenue stable
     
     if preset_name == "MARKET DROP":
         st.session_state.roi_scen_freight = base_freight * 0.90
         st.session_state.roi_scen_fuel = base_fuel
         st.session_state.roi_scen_delay = st.session_state.roi_base_delay
+        st.session_state.roi_scen_revenue_mt = base_rev * 0.85
     elif preset_name == "MARKET SURGE":
         st.session_state.roi_scen_freight = base_freight * 1.15
         st.session_state.roi_scen_fuel = base_fuel
         st.session_state.roi_scen_delay = st.session_state.roi_base_delay
+        st.session_state.roi_scen_revenue_mt = base_rev * 1.25
     elif preset_name == "FUEL SHOCK":
         st.session_state.roi_scen_freight = base_freight
         st.session_state.roi_scen_fuel = base_fuel * 1.20
@@ -69,6 +77,7 @@ def apply_preset(preset_name):
         st.session_state.roi_scen_freight = base_freight * 1.20
         st.session_state.roi_scen_fuel = base_fuel * 1.20
         st.session_state.roi_scen_delay = st.session_state.roi_base_delay + 72.0
+        st.session_state.roi_scen_revenue_mt = base_rev * 0.90
 
 
 def calculate_costs():
@@ -85,6 +94,8 @@ def calculate_costs():
     base_procurement_cost = st.session_state.roi_base_procurement * voyages
     
     total_base = base_freight_cost + base_fuel_cost + base_port_cost + base_delay_cost + base_procurement_cost
+    base_revenue = st.session_state.roi_base_revenue_mt * total_vol
+    base_profit = base_revenue - total_base
     
     # Scenario
     scen_freight_cost = st.session_state.roi_scen_freight * total_vol
@@ -94,27 +105,29 @@ def calculate_costs():
     scen_procurement_cost = st.session_state.roi_scen_procurement * voyages
     
     total_scen = scen_freight_cost + scen_fuel_cost + scen_port_cost + scen_delay_cost + scen_procurement_cost
+    scen_revenue = st.session_state.roi_scen_revenue_mt * total_vol
+    scen_profit = scen_revenue - total_scen
     
-    savings = total_base - total_scen
-    savings_pct = (savings / total_base * 100) if total_base > 0 else 0
+    profit_impact = scen_profit - base_profit
+    impact_pct = (profit_impact / abs(base_profit) * 100) if base_profit != 0 else 0
     
-    # Operational ROI (Comparing savings to a fixed enterprise optimization tool cost proxy)
+    # Operational ROI (Comparing profit impact to a fixed enterprise optimization tool cost proxy)
     optimization_cost = 50000.0 
-    operational_roi = (savings / optimization_cost * 100) if savings > 0 else 0
+    operational_roi = (profit_impact / optimization_cost * 100) if optimization_cost > 0 else 0
     
-    # Risk-Adjusted Savings
+    # Risk-Adjusted P&L Impact
     risk_factor = 1.0 - (st.session_state.roi_market_risk / 100.0) - (st.session_state.roi_fuel_risk / 100.0) - (st.session_state.roi_delay_prob / 100.0 * 0.5)
-    risk_adj_savings = savings * risk_factor
+    risk_adj_impact = profit_impact * risk_factor
     
     return {
         "base_breakdown": [base_freight_cost, base_fuel_cost, base_port_cost, base_delay_cost, base_procurement_cost],
         "scen_breakdown": [scen_freight_cost, scen_fuel_cost, scen_port_cost, scen_delay_cost, scen_procurement_cost],
-        "total_base": total_base,
-        "total_scen": total_scen,
-        "savings": savings,
-        "savings_pct": savings_pct,
+        "base_profit": base_profit,
+        "scen_profit": scen_profit,
+        "profit_impact": profit_impact,
+        "impact_pct": impact_pct,
         "roi": operational_roi,
-        "risk_adj_savings": risk_adj_savings
+        "risk_adj_impact": risk_adj_impact
     }
 
 
@@ -186,10 +199,10 @@ def render_roi_simulator_view(render_page_header_func, all_data):
         c1, c2, c3, c4 = st.columns(4)
         
         with c1:
-            st.markdown('<div class="section-header">A. VOYAGE / CARGO</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">A. VOYAGE / REVENUE</div>', unsafe_allow_html=True)
             st.session_state.roi_vol = st.number_input("Cargo Volume (MT)", min_value=1000, value=st.session_state.roi_vol, step=1000)
-            st.session_state.roi_dist = st.number_input("Voyage Distance (NM)", min_value=100, value=st.session_state.roi_dist, step=500)
-            st.session_state.roi_voyages = st.number_input("Number of Voyages", min_value=1, value=st.session_state.roi_voyages, step=1)
+            st.session_state.roi_base_revenue_mt = st.number_input("Base Revenue ($/MT)", min_value=0.0, value=st.session_state.roi_base_revenue_mt, step=1.0)
+            st.session_state.roi_scen_revenue_mt = st.number_input("Scenario Revenue ($/MT)", min_value=0.0, value=st.session_state.roi_scen_revenue_mt, step=1.0)
             st.selectbox("Charter Type", ["Spot Charter", "Time Charter", "Contract"], key="roi_charter_type")
             
         with c2:
@@ -220,51 +233,57 @@ def render_roi_simulator_view(render_page_header_func, all_data):
     res = calculate_costs()
     
     # ---------------------------------------------------------
-    # KPI DASHBOARD
+    # KPI DASHBOARD (PROFIT & LOSS)
     # ---------------------------------------------------------
-    st.markdown('<div class="section-title">📈 FINANCIAL IMPACT</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📈 FINANCIAL IMPACT (PROFIT & LOSS)</div>', unsafe_allow_html=True)
     
-    sav_class = "positive" if res["savings"] >= 0 else "negative"
-    sav_sign = "+" if res["savings"] >= 0 else ""
+    impact_class = "positive" if res["profit_impact"] >= 0 else "negative"
+    impact_sign = "+" if res["profit_impact"] >= 0 else ""
+    
+    base_class = "positive" if res["base_profit"] >= 0 else "negative"
+    base_sign = "+" if res["base_profit"] >= 0 else ""
+    
+    scen_class = "positive" if res["scen_profit"] >= 0 else "negative"
+    scen_sign = "+" if res["scen_profit"] >= 0 else ""
     
     st.markdown('<div class="roi-kpi-grid">', unsafe_allow_html=True)
     
     st.markdown(f"""
     <div class="roi-kpi-card" style="animation-delay: 0s;">
-        <div class="title">TOTAL BASELINE COST</div>
-        <div class="value">${res['total_base']:,.0f}</div>
-        <div class="sub">Reference Point</div>
+        <div class="title">BASELINE P&L</div>
+        <div class="value {base_class}">{base_sign}${res['base_profit']:,.0f}</div>
+        <div class="sub">Current Reference Profit</div>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown(f"""
     <div class="roi-kpi-card" style="animation-delay: 0.1s;">
-        <div class="title">WHAT-IF SCENARIO COST</div>
-        <div class="value">${res['total_scen']:,.0f}</div>
-        <div class="sub">Simulated Outcome</div>
+        <div class="title">SCENARIO P&L</div>
+        <div class="value {scen_class}">{scen_sign}${res['scen_profit']:,.0f}</div>
+        <div class="sub">Simulated Profit Outcome</div>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown(f"""
     <div class="roi-kpi-card" style="animation-delay: 0.2s;">
-        <div class="title">ESTIMATED SAVINGS / LOSS</div>
-        <div class="value {sav_class}">{sav_sign}${res['savings']:,.0f}</div>
-        <div class="sub">{sav_sign}{res['savings_pct']:.2f}% Impact</div>
+        <div class="title">NET P&L IMPACT</div>
+        <div class="value {impact_class}">{impact_sign}${res['profit_impact']:,.0f}</div>
+        <div class="sub">{impact_sign}{res['impact_pct']:.2f}% Impact vs Baseline</div>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown(f"""
     <div class="roi-kpi-card" style="animation-delay: 0.3s;">
-        <div class="title">OPERATIONAL ROI / COST IMPACT</div>
-        <div class="value {sav_class}">{sav_sign}{res['roi']:,.0f}%</div>
+        <div class="title">OPERATIONAL ROI</div>
+        <div class="value {impact_class}">{impact_sign}{res['roi']:,.0f}%</div>
         <div class="sub">Relative to $50k optimization cost</div>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown(f"""
     <div class="roi-kpi-card" style="animation-delay: 0.4s;">
-        <div class="title">RISK-ADJUSTED SAVINGS</div>
-        <div class="value {sav_class}">{sav_sign}${res['risk_adj_savings']:,.0f}</div>
+        <div class="title">RISK-ADJUSTED P&L IMPACT</div>
+        <div class="value {impact_class}">{impact_sign}${res['risk_adj_impact']:,.0f}</div>
         <div class="sub">Factoring market/fuel/delay probabilities</div>
     </div>
     """, unsafe_allow_html=True)
@@ -294,25 +313,31 @@ def render_roi_simulator_view(render_page_header_func, all_data):
         st.markdown('</div>', unsafe_allow_html=True)
         
     with c_chart2:
-        st.markdown('<div class="chart-container"><div class="chart-title">Cost Sensitivity Analysis (Freight Rate)</div>', unsafe_allow_html=True)
-        # Generate points for line chart
+        st.markdown('<div class="chart-container"><div class="chart-title">P&L Sensitivity Analysis (Freight Rate Cost)</div>', unsafe_allow_html=True)
+        # Generate points for line chart (showing Profit instead of Cost)
         f_rates = np.linspace(st.session_state.roi_base_freight * 0.7, st.session_state.roi_base_freight * 1.3, 20)
-        # Calculate total cost for each freight rate assuming scenario fuel/port/delay
+        
         vols = st.session_state.roi_vol * st.session_state.roi_voyages
         fixed_costs = res["scen_breakdown"][1] + res["scen_breakdown"][2] + res["scen_breakdown"][3] + res["scen_breakdown"][4]
-        costs = [f * vols + fixed_costs for f in f_rates]
+        scen_revenue = st.session_state.roi_scen_revenue_mt * vols
+        
+        # Profit = Revenue - (Freight + Fixed Costs)
+        profits = [scen_revenue - (f * vols + fixed_costs) for f in f_rates]
         
         fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=f_rates, y=costs, mode='lines', name='Total Cost Curve', line=dict(color='#00d4ff', width=3)))
+        fig2.add_trace(go.Scatter(x=f_rates, y=profits, mode='lines', name='P&L Curve', line=dict(color='#00d4ff', width=3)))
         # Mark baseline and scenario
-        fig2.add_trace(go.Scatter(x=[st.session_state.roi_base_freight], y=[res['total_base']], mode='markers', name='Baseline', marker=dict(color='#f59e0b', size=12, symbol='star')))
-        fig2.add_trace(go.Scatter(x=[st.session_state.roi_scen_freight], y=[res['total_scen']], mode='markers', name='Scenario', marker=dict(color='#10b981', size=12, symbol='star')))
+        fig2.add_trace(go.Scatter(x=[st.session_state.roi_base_freight], y=[res['base_profit']], mode='markers', name='Baseline', marker=dict(color='#f59e0b', size=12, symbol='star')))
+        fig2.add_trace(go.Scatter(x=[st.session_state.roi_scen_freight], y=[res['scen_profit']], mode='markers', name='Scenario', marker=dict(color='#10b981', size=12, symbol='star')))
+        
+        # Add zero-profit baseline
+        fig2.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.3)")
         
         fig2.update_layout(
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#FFF'),
             margin=dict(l=0, r=0, t=30, b=0), height=350,
             xaxis=dict(title='Freight Rate ($/MT)', showgrid=True, gridcolor='rgba(0,212,255,0.1)'),
-            yaxis=dict(title='Total Voyage Cost ($)', showgrid=True, gridcolor='rgba(0,212,255,0.1)'),
+            yaxis=dict(title='Total Voyage Profit ($)', showgrid=True, gridcolor='rgba(0,212,255,0.1)'),
             legend=dict(orientation='h', y=1.1)
         )
         st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
@@ -322,7 +347,7 @@ def render_roi_simulator_view(render_page_header_func, all_data):
     # SENSITIVITY MATRIX
     # ---------------------------------------------------------
     st.markdown('<div class="section-title">🧮 ENTERPRISE SENSITIVITY MATRIX</div>', unsafe_allow_html=True)
-    st.caption("MODELLED SCENARIO: Financial impact of concurrent Freight and Fuel price shocks (Savings / Loss $)")
+    st.caption("MODELLED SCENARIO: Financial impact of concurrent Freight and Fuel price shocks (Net P&L Impact $)")
     
     freight_pcts = [-20, -10, 0, 10, 20]
     fuel_pcts = [-10, 0, 10, 20]
@@ -345,11 +370,14 @@ def render_roi_simulator_view(render_page_header_func, all_data):
             sim_fixed = res["base_breakdown"][2] + res["base_breakdown"][3] + res["base_breakdown"][4]
             sim_total = sim_f_cost + sim_fu_cost + sim_fixed
             
-            sim_sav = res['total_base'] - sim_total
+            sim_revenue = st.session_state.roi_scen_revenue_mt * st.session_state.roi_vol * st.session_state.roi_voyages
+            sim_profit = sim_revenue - sim_total
             
-            css_class = "matrix-pos" if sim_sav >= 0 else "matrix-neg"
-            sign = "+" if sim_sav >= 0 else ""
-            table_html += f'<td class="matrix-val {css_class}">{sign}${sim_sav:,.0f}</td>'
+            sim_impact = sim_profit - res['base_profit']
+            
+            css_class = "matrix-pos" if sim_impact >= 0 else "matrix-neg"
+            sign = "+" if sim_impact >= 0 else ""
+            table_html += f'<td class="matrix-val {css_class}">{sign}${sim_impact:,.0f}</td>'
         table_html += '</tr>'
     table_html += '</tbody></table>'
     
