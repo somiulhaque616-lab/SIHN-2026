@@ -15,6 +15,7 @@ from services.news_service import get_geopolitical_risk
 from utils.data_status import DataStatus, get_status_badge_html, get_simple_badge_html
 from views.port_route_view import render_port_route_intel
 from views.reports_view import render_reports_view
+from views.roi_simulator_view import render_roi_simulator_view
 from components.ai_chatbot import render_chatbot
 
 
@@ -241,6 +242,7 @@ with st.sidebar:
         "Risk Intelligence": "◉" if st.session_state.get("active_page") == "Risk Intelligence" else "○",
         "Port & Route Intel": "◉" if st.session_state.get("active_page") == "Port & Route Intel" else "○",
         "Procurement": "◉" if st.session_state.get("active_page") == "Procurement" else "○",
+        "ROI & What-If": "◉" if st.session_state.get("active_page") == "ROI & What-If" else "○",
         "Reports": "◉" if st.session_state.get("active_page") == "Reports" else "○",
         "Settings": "◉" if st.session_state.get("active_page") == "Settings" else "○",
     }
@@ -475,6 +477,9 @@ elif st.session_state.active_page == "Port & Route Intel":
 elif st.session_state.active_page == "Procurement":
     render_page_header("Procurement", "Contract optimization and bunker fuel cost estimations")
     render_kpi_cards()
+
+elif st.session_state.active_page == "ROI & What-If":
+    render_roi_simulator_view(render_page_header, all_data)
 
 elif st.session_state.active_page == "Reports":
     render_reports_view(render_page_header)
