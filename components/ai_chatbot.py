@@ -36,6 +36,7 @@ def clear_chat():
     st.session_state.chat_history = []
 
 
+@st.fragment
 def render_chatbot(all_data: dict):
     """
     Renders the AI chatbot at the bottom of the application.

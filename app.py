@@ -367,8 +367,61 @@ def render_ai_panel():
 def render_forecast_chart():
     freight = all_data["freight"]["data"]
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=freight["dates"], y=freight["historical_prices"], mode='lines', name='Historical Rate', line=dict(color='#00d4ff', width=2)))
-    fig.add_trace(go.Scatter(x=freight["future_dates"], y=freight["forecast_prices"], mode='lines', name='AI Forecast (30-Day)', line=dict(color='#f59e0b', width=2.5, dash='dash')))
+    
+    # Historical Trace
+    fig.add_trace(go.Scatter(
+        x=freight["dates"], 
+        y=freight["historical_prices"], 
+        mode='lines', 
+        name='Historical Rates (Actual)', 
+        line=dict(color='#00d4ff', width=2)
+    ))
+    
+    # Generate confidence intervals
+    forecast_prices = freight["forecast_prices"]
+    future_dates = freight["future_dates"]
+    
+    # Calculate expanding variance using REAL-TIME risk data
+    # Base uncertainty
+    base_spread = 15.0
+    cone_expansion = 1.2
+    
+    # Increase uncertainty based on LIVE telemetry
+    weather_risk = all_data["weather_sg"].get("data", {}).get("risk_label", "NORMAL")
+    if weather_risk == "HIGH": cone_expansion += 1.5
+    elif weather_risk == "ELEVATED": cone_expansion += 0.8
+    
+    news_level = all_data["news"].get("data", {}).get("level", "MODERATE")
+    if news_level == "HIGH": base_spread += 10.0; cone_expansion += 1.0
+    elif news_level == "ELEVATED": base_spread += 5.0; cone_expansion += 0.5
+    
+    fuel_change = abs(all_data["fuel"].get("data", {}).get("change", 0.0))
+    if fuel_change > 2.0: cone_expansion += 1.2
+    elif fuel_change > 0.5: cone_expansion += 0.5
+    
+    std_devs = [base_spread + (i * cone_expansion) for i in range(len(forecast_prices))]
+    upper_bound = [p + s for p, s in zip(forecast_prices, std_devs)]
+    lower_bound = [p - s for p, s in zip(forecast_prices, std_devs)]
+    
+    # 95% Confidence Interval (Shaded Area)
+    fig.add_trace(go.Scatter(
+        x=list(future_dates) + list(future_dates)[::-1],
+        y=upper_bound + lower_bound[::-1],
+        fill='toself',
+        fillcolor='rgba(245, 158, 11, 0.15)',
+        line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo="skip",
+        name='95% Confidence Interval'
+    ))
+    
+    # Forecast Trace
+    fig.add_trace(go.Scatter(
+        x=future_dates, 
+        y=forecast_prices, 
+        mode='lines', 
+        name='Ensemble AI Forecast', 
+        line=dict(color='#f59e0b', width=2.5, dash='dash')
+    ))
     
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',

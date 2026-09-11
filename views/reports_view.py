@@ -6,6 +6,7 @@ from utils.pdf_generator import build_pdf_report
 from utils.export_utils import export_report_csv, export_report_json
 from utils.data_status import DataStatus, get_status_badge_html, get_simple_badge_html
 
+@st.fragment
 def render_reports_view(render_page_header):
     render_page_header("Reports", "Generate and export intelligence briefs")
     

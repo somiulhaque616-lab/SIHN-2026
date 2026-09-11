@@ -162,7 +162,9 @@ def inject_roi_css():
     """, unsafe_allow_html=True)
 
 
+@st.fragment
 def render_roi_simulator_view(render_page_header_func, all_data):
+    """Render the Enterprise ROI & What-If Scenario Simulator."""
     init_simulator_state(all_data)
     inject_roi_css()
     
