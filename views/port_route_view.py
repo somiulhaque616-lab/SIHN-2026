@@ -34,7 +34,7 @@ def render_port_route_intel(render_page_header):
         # Top KPI Cards
         st.markdown('<div class="kpi-container" style="grid-template-columns: repeat(4, 1fr);">', unsafe_allow_html=True)
         
-        distance_str = f"{r_data['distance_nm']:,.0f} NM"
+        distance_str = f"{r_data['distance_km']:,.0f} KM"
         eta_str = f"{r_data['eta_days']:.1f} Days"
         fuel_str = f"{r_data['fuel_mt']:,.0f} MT"
         

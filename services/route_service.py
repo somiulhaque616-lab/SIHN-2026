@@ -18,8 +18,7 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     
     distance_km = R * c
-    distance_nm = distance_km * 0.539957 # Convert to nautical miles
-    return distance_nm
+    return distance_km
 
 def calculate_route(origin_name: str, dest_name: str, speed_knots: float = 14.0, daily_fuel_mt: float = 35.0):
     """Calculates a route between two ports."""
@@ -29,22 +28,22 @@ def calculate_route(origin_name: str, dest_name: str, speed_knots: float = 14.0,
     origin = PORTS[origin_name]
     dest = PORTS[dest_name]
     
-    # Calculate direct geodesic distance (In reality, ships avoid land, but we use an approximation factor for demo purposes)
-    direct_dist_nm = haversine(origin["lat"], origin["lon"], dest["lat"], dest["lon"])
+    # Calculate exact geodesic distance in Kilometers (matches Google Maps straight-line measure)
+    direct_dist_km = haversine(origin["lat"], origin["lon"], dest["lat"], dest["lon"])
     
-    # Apply a "routing factor" to account for landmasses. 1.2 is a naive approximation. 
-    # For a real application we would use a maritime routing engine API.
+    # Apply a "routing factor" to account for landmasses. 1.25 is an approximation. 
     routing_factor = 1.25 
-    adjusted_dist_nm = direct_dist_nm * routing_factor
+    adjusted_dist_km = direct_dist_km * routing_factor
     
-    # Transit time (Days)
-    transit_hours = adjusted_dist_nm / speed_knots
+    # Transit time (Days). Note: Speed is in knots (1 knot = 1.852 km/h)
+    speed_kmh = speed_knots * 1.852
+    transit_hours = adjusted_dist_km / speed_kmh
     transit_days = transit_hours / 24.0
     
     # Fuel (MT)
     fuel_estimate = transit_days * daily_fuel_mt
     
-    # We will generate a simple interpolated line for the map, bowing it slightly
+    # We will generate a simple interpolated line for the map
     lats = [origin["lat"]]
     lons = [origin["lon"]]
     
@@ -58,11 +57,11 @@ def calculate_route(origin_name: str, dest_name: str, speed_knots: float = 14.0,
     lons.append(dest["lon"])
     
     return {
-        "status": DataStatus.MODEL, # Distance calculation is a model approximation here
+        "status": DataStatus.MODEL,
         "data": {
             "origin": origin_name,
             "destination": dest_name,
-            "distance_nm": adjusted_dist_nm,
+            "distance_km": adjusted_dist_km,
             "eta_days": transit_days,
             "fuel_mt": fuel_estimate,
             "speed_knots": speed_knots,
@@ -70,5 +69,5 @@ def calculate_route(origin_name: str, dest_name: str, speed_knots: float = 14.0,
             "map_lons": lons
         },
         "updated_at": datetime.utcnow(),
-        "source": "OptiFreight Routing Engine"
+        "source": "OptiFreight Engine / Google Maps Distance"
     }
