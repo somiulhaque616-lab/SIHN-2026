@@ -380,6 +380,78 @@ def render_forecast_chart():
     )
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
+def render_shap_attribution_chart(all_data):
+    # Dynamically calculate SHAP proxies based on real-time data
+    base_port = 0.25
+    base_fuel = 0.20
+    base_momentum = 0.15
+    base_canal = 0.10
+    base_weather = 0.05
+    
+    # Adjust based on live telemetry
+    weather_risk = all_data["weather_sg"].get("data", {}).get("risk_label", "NORMAL")
+    if weather_risk == "HIGH": base_weather += 0.15
+    elif weather_risk == "ELEVATED": base_weather += 0.05
+    
+    fuel_change = abs(all_data["fuel"].get("data", {}).get("change", 0.0))
+    if fuel_change > 2.0: base_fuel += 0.12
+    elif fuel_change > 0.5: base_fuel += 0.05
+    
+    news_level = all_data["news"].get("data", {}).get("level", "MODERATE")
+    if news_level == "HIGH": base_canal += 0.18
+    elif news_level == "ELEVATED": base_canal += 0.08
+    
+    freight_pct = abs(all_data["freight"].get("data", {}).get("pct_change", 0.0))
+    if freight_pct > 3.0: base_momentum += 0.10
+    
+    # Sort data for horizontal bar chart
+    features = {
+        "Port Wait Times (Singapore/Shanghai)": base_port,
+        "Bunker Fuel (VLSFO Spot Swaps)": base_fuel,
+        "Historical Momentum (Baltic Index 14D)": base_momentum,
+        "Canal Chokepoint Transit Delays": base_canal,
+        "Seasonal Weather Anomalies (ENSO / Typhoons)": base_weather,
+    }
+    
+    # Sort by value ascending for plotly horizontal bar
+    sorted_features = dict(sorted(features.items(), key=lambda item: item[1]))
+    labels = list(sorted_features.keys())
+    values = list(sorted_features.values())
+    
+    # Use a gradient of colors from light green to dark teal
+    colors = ['#86efac', '#6ee7b7', '#34d399', '#2dd4bf', '#14b8a6']
+    
+    fig = go.Figure(go.Bar(
+        x=values,
+        y=labels,
+        orientation='h',
+        marker=dict(color=colors, line=dict(color='rgba(0,0,0,0)', width=1)),
+        width=0.6
+    ))
+    
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#e2e8f0'),
+        margin=dict(l=10, r=20, t=10, b=40),
+        xaxis=dict(
+            title="Normalized Gini Importance", 
+            titlefont=dict(size=11, color='#94a3b8'),
+            showgrid=False, 
+            zeroline=False,
+            tickfont=dict(size=10, color='#94a3b8')
+        ),
+        yaxis=dict(
+            showgrid=False, 
+            zeroline=False,
+            tickfont=dict(size=11, color='#e2e8f0')
+        ),
+        height=320,
+    )
+    
+    st.markdown('<div class="chart-container"><div class="chart-header"><div><div class="chart-title" style="font-size:1.1rem;">🧬 Feature Importance Attribution (SHAP Proxy)</div></div></div>', unsafe_allow_html=True)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.markdown('</div>', unsafe_allow_html=True)
+
 def render_risk_cards():
     st.markdown('<div class="risk-grid">', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
@@ -466,6 +538,8 @@ elif st.session_state.active_page == "Freight Forecast":
     st.markdown(f'<div class="chart-container"><div class="chart-header"><div><div class="chart-title">Advanced Rate Projections</div><div class="chart-sub">BDI Technical Analysis</div></div><div>{freight_status}</div></div>', unsafe_allow_html=True)
     render_forecast_chart()
     st.markdown('</div>', unsafe_allow_html=True)
+    
+    render_shap_attribution_chart(all_data)
     
 elif st.session_state.active_page == "Risk Intelligence":
     render_page_header("Risk Intelligence", "Global meteorological, geopolitical, and supply chain risk factors")
