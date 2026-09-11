@@ -374,7 +374,7 @@ def render_forecast_chart():
         legend=dict(orientation='h', y=1.1, font=dict(color='#FFF')),
         height=380,
     )
-    st.plotly_chart(fig, width="stretch", config={'displayModeBar': False})
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 def render_risk_cards():
     st.markdown('<div class="risk-grid">', unsafe_allow_html=True)

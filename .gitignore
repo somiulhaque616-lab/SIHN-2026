@@ -50,3 +50,7 @@ test_*.py
 build_*.py
 update_*.py
 fix_*.py
+
+# Nested repos & agent files
+SIHN-2026/
+.agents/

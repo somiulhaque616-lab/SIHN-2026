@@ -67,6 +67,21 @@ def get_fuel_price():
         "source": "Simulated Data"
     }
 
+def get_port_congestion(port_name: str = "Shanghai"):
+    """Returns DEMO data for port congestion metrics."""
+    return {
+        "status": DataStatus.DEMO,
+        "data": {
+            "port": port_name,
+            "congestion_level": "MODERATE",
+            "wait_time_hours": 36,
+            "vessels_at_anchor": 28,
+            "trend": "Improving"
+        },
+        "updated_at": datetime.utcnow(),
+        "source": "Simulated Port Data"
+    }
+
 def get_vessel_intelligence():
     """Returns DEMO data for AIS Vessel tracking."""
     return {
