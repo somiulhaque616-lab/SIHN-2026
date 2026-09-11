@@ -91,7 +91,12 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {{
     background: var(--bg-gradient) !important;
     color: var(--text-main) !important;
 }}
-#MainMenu, footer, header[data-testid="stHeader"] {{ display: none !important; }}
+#MainMenu, footer { display: none !important; }
+header[data-testid="stHeader"] { background-color: transparent !important; }
+/* Push content down slightly on mobile so it doesn't overlap the hamburger menu */
+@media (max-width: 768px) {
+    .block-container { padding-top: 3.5rem !important; }
+}
 
 .block-container {{
     padding-top: 1.5rem !important;
