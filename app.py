@@ -194,6 +194,25 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {{
 .risk-card .sub {{ font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; }}
 
 .stPlotlyChart {{ background: transparent !important; }}
+
+/* ── Mobile Optimization (Responsive Design) ── */
+@media (max-width: 768px) {{
+    .block-container {{ padding-top: 1rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }}
+    .dash-header {{ flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }}
+    .dash-meta {{ flex-wrap: wrap; }}
+    .kpi-container {{ grid-template-columns: repeat(2, 1fr); gap: 12px; }}
+    .risk-grid {{ grid-template-columns: 1fr; gap: 12px; }}
+    .ai-hero {{ padding: 20px; }}
+    .ai-hero .status {{ font-size: 2.8rem; }}
+    .ai-hero .metrics {{ flex-direction: column; gap: 16px; }}
+    .chart-container {{ padding: 12px; }}
+    [data-testid="stSidebar"] {{ min-width: 85vw !important; max-width: 85vw !important; }}
+}}
+
+@media (max-width: 480px) {{
+    .kpi-container {{ grid-template-columns: 1fr; }}
+    .dash-title {{ font-size: 1.5rem; }}
+}}
 </style>
 """, unsafe_allow_html=True)
 
