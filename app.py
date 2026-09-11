@@ -15,6 +15,8 @@ from services.news_service import get_geopolitical_risk
 from utils.data_status import DataStatus, get_status_badge_html, get_simple_badge_html
 from views.port_route_view import render_port_route_intel
 from views.reports_view import render_reports_view
+from components.ai_chatbot import render_chatbot
+
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -480,4 +482,7 @@ elif st.session_state.active_page == "Reports":
 elif st.session_state.active_page == "Settings":
     render_page_header("Settings", "Configure API preferences and system thresholds")
     st.markdown('<div class="chart-container"><h3>System Status</h3><p>All core intelligence engines are running normally.</p></div>', unsafe_allow_html=True)
+
+# Render floating AI Chatbot across all pages
+render_chatbot(all_data)
 
