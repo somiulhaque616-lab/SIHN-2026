@@ -434,8 +434,7 @@ def render_shap_attribution_chart(all_data):
         font=dict(color='#e2e8f0'),
         margin=dict(l=10, r=20, t=10, b=40),
         xaxis=dict(
-            title="Normalized Gini Importance", 
-            titlefont=dict(size=11, color='#94a3b8'),
+            title=dict(text="Normalized Gini Importance", font=dict(size=11, color='#94a3b8')),
             showgrid=False, 
             zeroline=False,
             tickfont=dict(size=10, color='#94a3b8')
