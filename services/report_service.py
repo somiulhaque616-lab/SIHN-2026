@@ -95,7 +95,36 @@ def generate_intelligence_report(report_type: str, period: str, custom_range: tu
         live_mode=live_mode
     )
 
-    # 4. Construct complete report dictionary
+    # Filter chart data by period
+    h_dates = freight_data.get("dates", [])
+    h_prices = freight_data.get("historical_prices", [])
+    
+    # Ensure they are datetime/date objects for comparison
+    h_dates_dt = pd.to_datetime(h_dates)
+    
+    if period == "Last 7 Days":
+        cutoff = h_dates_dt[-1] - timedelta(days=7)
+        mask = h_dates_dt >= cutoff
+    elif period == "Last 30 Days":
+        cutoff = h_dates_dt[-1] - timedelta(days=30)
+        mask = h_dates_dt >= cutoff
+    elif period == "Custom Range" and custom_range:
+        start_d, end_d = custom_range
+        # Convert custom_range to datetime
+        start_d = pd.to_datetime(start_d)
+        end_d = pd.to_datetime(end_d)
+        mask = (h_dates_dt >= start_d) & (h_dates_dt <= end_d)
+    else: # Today or default
+        cutoff = h_dates_dt[-1] - timedelta(days=1)
+        mask = h_dates_dt >= cutoff
+
+    filtered_dates = h_dates_dt[mask]
+    filtered_prices = np.array(h_prices)[mask]
+
+    # Convert back to standard lists
+    f_dates_list = [d.strftime("%Y-%m-%d") for d in filtered_dates]
+    f_prices_list = [round(float(x), 2) for x in filtered_prices]
+
     report = {
         "id": f"REP-{int(timestamp.timestamp())}",
         "title": report_type,
@@ -170,8 +199,8 @@ def generate_intelligence_report(report_type: str, period: str, custom_range: tu
         ],
 
         "chart_data": {
-            "dates": [d.strftime("%Y-%m-%d") for d in freight_data.get("dates", [])],
-            "historical_prices": [round(float(x), 2) for x in freight_data.get("historical_prices", [])],
+            "dates": f_dates_list,
+            "historical_prices": f_prices_list,
             "future_dates": [d.strftime("%Y-%m-%d") for d in freight_data.get("future_dates", [])],
             "forecast_prices": [round(float(x), 2) for x in freight_data.get("forecast_prices", [])]
         }

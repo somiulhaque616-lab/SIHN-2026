@@ -105,10 +105,17 @@ def render_reports_view(render_page_header):
     top_meta_col1, top_meta_col2 = st.columns([2, 3])
     with top_meta_col1:
         mode_badge = f'<span class="badge positive">LIVE DATA REPORT</span>' if not curr_report["is_demo"] else f'<span class="badge negative">DEMO REPORT</span>'
+        
+        # Format custom range if it exists
+        period_str = curr_report['period']
+        c_range = curr_report.get('custom_range')
+        if period_str == "Custom Range" and c_range and len(c_range) == 2:
+            period_str = f"Custom Range ({c_range[0]} to {c_range[1]})"
+            
         st.markdown(f"""
 <div style="margin-bottom: 12px;">
 <div style="font-size: 1.3rem; font-weight: 800; color: #FFF;">{curr_report['title']}</div>
-<div style="font-size: 0.8rem; color: #94a3b8;">Period: <strong>{curr_report['period']}</strong> &nbsp;|&nbsp; Generated: <strong>{curr_report['generated_date_display']}</strong> &nbsp; {mode_badge}</div>
+<div style="font-size: 0.8rem; color: #94a3b8;">Period: <strong>{period_str}</strong> &nbsp;|&nbsp; Generated: <strong>{curr_report['generated_date_display']}</strong> &nbsp; {mode_badge}</div>
 </div>
 """, unsafe_allow_html=True)
 

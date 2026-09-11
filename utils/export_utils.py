@@ -49,5 +49,16 @@ def export_report_csv(report: dict) -> str:
     writer.writerow(["Source Name", "Provider", "Status", "Last Updated"])
     for ds in report.get("data_sources", []):
         writer.writerow([ds.get("name"), ds.get("source"), ds.get("status"), ds.get("updated")])
+    writer.writerow([])
+    
+    # Historical Time-Series Data (7, 30, Custom Range)
+    writer.writerow(["HISTORICAL TIME-SERIES DATA"])
+    chart_data = report.get("chart_data", {})
+    dates = chart_data.get("dates", [])
+    prices = chart_data.get("historical_prices", [])
+    
+    writer.writerow(["Date", "Freight Rate ($/MT)"])
+    for d, p in zip(dates, prices):
+        writer.writerow([d, p])
         
     return output.getvalue()

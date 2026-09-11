@@ -98,6 +98,12 @@ def build_pdf_report(report: dict) -> bytes:
 
     story = []
 
+    # Format the Period string to include explicit custom range dates if available
+    period_str = report.get("period", "")
+    c_range = report.get("custom_range")
+    if period_str == "Custom Range" and c_range and len(c_range) == 2:
+        period_str = f"Custom Range ({c_range[0]} to {c_range[1]})"
+
     # 1. Header Banner
     header_data = [
         [
@@ -125,7 +131,7 @@ def build_pdf_report(report: dict) -> bytes:
             Paragraph("<b>Report Type:</b>", bold_label_style),
             Paragraph(report.get("title", ""), body_style),
             Paragraph("<b>Evaluation Period:</b>", bold_label_style),
-            Paragraph(report.get("period", ""), body_style)
+            Paragraph(period_str, body_style)
         ]
     ]
     meta_table = Table(meta_data, colWidths=[80, 190, 110, 160])
@@ -292,6 +298,39 @@ def build_pdf_report(report: dict) -> bytes:
     ]))
     story.append(ds_table)
     story.append(Spacer(1, 20))
+    
+    # 7. Historical Time-Series Data (Appended Table for custom ranges / 7d / 30d)
+    chart_data = report.get("chart_data", {})
+    ts_dates = chart_data.get("dates", [])
+    ts_prices = chart_data.get("historical_prices", [])
+    
+    if ts_dates and ts_prices:
+        story.append(Paragraph("HISTORICAL DATA LOG", section_header_style))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER_COLOR, spaceBefore=0, spaceAfter=8))
+        
+        ts_rows = [
+            [
+                Paragraph("<b>Date</b>", bold_label_style),
+                Paragraph("<b>Freight Rate ($/MT)</b>", bold_label_style)
+            ]
+        ]
+        
+        # Limit rows if it's too huge, but they want the data
+        for d, p in zip(ts_dates, ts_prices):
+            ts_rows.append([
+                Paragraph(d, body_style),
+                Paragraph(f"${p:,.2f}", body_style)
+            ])
+            
+        ts_table = Table(ts_rows, colWidths=[270, 270])
+        ts_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), BG_LIGHT),
+            ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+            ('PADDING', (0,0), (-1,-1), 4),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(ts_table)
+        story.append(Spacer(1, 20))
 
     # Footer Notice
     footer_text = (
